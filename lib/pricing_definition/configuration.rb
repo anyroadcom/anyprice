@@ -3,13 +3,11 @@ require 'ostruct' unless defined?(OpenStruct)
 module PricingDefinition
   class Configuration
     @@resource_types = [
-      :addons,
       :modifiers,
       :priceables
     ]
 
     @@configuration = {
-      :addons     => [],
       :modifiers  => [],
       :priceables => []
     }
@@ -20,7 +18,6 @@ module PricingDefinition
 
     def self.add(resource_type, opts = {})
       type = case resource_type
-             when :addon     then :addons
              when :modifier  then :modifiers
              when :priceable then :priceables
              end

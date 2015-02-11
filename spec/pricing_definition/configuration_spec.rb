@@ -2,17 +2,15 @@ require 'spec_helper'
 
 module PricingDefinition
   describe Configuration do
-    @pricing_resource_types = [:addons, :modifiers, :priceables]
-
     describe '.setup' do
       subject { Configuration.setup }
 
-      it 'contains :addons, :modifiers and :priceables keys'do
-        expect(subject).to include(*@pricing_resource_types)
+      it 'contains :modifiers and :priceables keys'do
+        expect(subject).to include(:modifiers, :priceables)
       end
     end
 
-    @pricing_resource_types.each do |method_name|
+    [:modifiers, :priceables].each do |method_name|
       describe ".#{method_name}" do
         subject { Configuration.send(method_name) }
 
