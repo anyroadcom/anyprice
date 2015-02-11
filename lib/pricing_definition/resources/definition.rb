@@ -1,8 +1,21 @@
 require 'active_record'
+require 'rschema'
 
 module PricingDefinition
   module Resources
     class Definition < ActiveRecord::Base
+
+      PRICING_SCHEMA = RSchema.schema do
+        {
+          fixed: predicate { |n| [TrueClass, FalseClass].include?(n.class) },
+          price: predicate { |n|
+            n.is_a?(Hash) &&
+            [[:fixed], [:children, :adults]].include?(n.keys) &&
+            n.values.all? { |v| v.is_a?(Integer) }
+          },
+          deposit: Integer
+        }
+      end
 
       serialize :definition
 
@@ -13,6 +26,7 @@ module PricingDefinition
       validate :starts_at_before_ends_at, if: 'starts_at.present?'
       validate :starts_at_validity, if: 'starts_at.present?'
       validate :definition_present
+      validate :definition_schema
       validate :definition_overlaping
       validate :definition_inconsistency
       validate :definition_lower_bounds
@@ -143,6 +157,23 @@ module PricingDefinition
         if higher_boundary > priceable.send(priceable_config[:maximum])
           errors.add :definition, :out_of_bounds_higher
         end
+      end
+
+      def definition_schema
+        definition.each do |volume, pricing|
+          errors.add :definition, :invalid_schema unless valid_schema?(pricing)
+          errors.add :definition, :invalid_volume unless valid_volume?(volume)
+        end
+      end
+
+      def valid_volume?(volume)
+        [/\d+\+/, /\d+\.\.\d+/].any? { |rx| !volume[rx].nil? }
+      end
+
+      def valid_schema?(pricing)
+        RSchema.validate!(PRICING_SCHEMA, pricing)
+      rescue
+        false
       end
 
       def priceable_config

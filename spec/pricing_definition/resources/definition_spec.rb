@@ -105,16 +105,15 @@ module PricingDefinition
 
         let(:definition) { create_definition! definition: prices.inject(:update) }
         let(:prices) { [price_one_or_more, price_four_to_ten] }
-        let(:price_one_or_more) { { "1+" => "one_or_more" } }
-        let(:price_four_to_ten) { { "4..10" => "four_to_ten" } }
+        let(:pricing) { { fixed: true, price:{ fixed: 11 }, deposit: 0 } }
+        let(:price_one_or_more) { { "1+" => pricing } }
+        let(:price_four_to_ten) { { "4..10" => pricing } }
 
         it 'returns a copy of definitions with ranges as keys' do
           expect(subject.keys[0]).to be_a(Range)
           expect(subject.keys[0].to_s).to eq('1..Infinity')
-          expect(subject.values[0]).to eq("one_or_more")
           expect(subject.keys[1]).to be_a(Range)
           expect(subject.keys[1].to_s).to eq('4..10')
-          expect(subject.values[1]).to eq("four_to_ten")
         end
       end
 
@@ -123,18 +122,18 @@ module PricingDefinition
 
         let(:definition) { create_definition! definition: prices.inject(:update) }
         let(:prices) { [price_one_or_more, price_four_to_ten, price_eleven_or_more] }
-        let(:price_one_or_more) { { "1+" => "one_or_more" } }
-        let(:price_four_to_ten) { { "4..10" => "four_to_ten" } }
-        let(:price_eleven_or_more) { { "11+" => "eleven_or_more" } }
+        let(:price_one_or_more) { { "1+" => { fixed: true, price:{ fixed: 1 }, deposit: 0 } } }
+        let(:price_four_to_ten) { { "4..10" => { fixed: true, price:{ fixed: 4 }, deposit: 0 } } }
+        let(:price_eleven_or_more) { { "11+" => { fixed: true, price:{ fixed: 11 }, deposit: 0 } } }
 
         let(:volume) { 4 }
 
         it 'returns first matching definition' do
           expect(subject[:volume]).to cover(volume)
           expect(subject[:volume]).to_not cover(1, 2, 3, 11)
-          expect(subject[:pricing]).to eq("four_to_ten")
-          expect(subject[:pricing]).to_not eq("one_or_more")
-          expect(subject[:pricing]).to_not eq("eleven_or_more")
+          expect(subject[:pricing][:price][:fixed]).to eq(4)
+          expect(subject[:pricing][:price][:fixed]).to_not eq(1)
+          expect(subject[:pricing][:price][:fixed]).to_not eq(11)
         end
       end
 
@@ -147,8 +146,9 @@ module PricingDefinition
           context 'without inconsistent sequence' do
             context 'with fixed boundaries' do
               let(:prices) { [price_one_to_four, price_five_to_nine] }
-              let(:price_one_to_four) { { "1..4" => "one_to_four" } }
-              let(:price_five_to_nine) { { "5..9" => "five_to_nine" } }
+              let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
+              let(:price_one_to_four) { { "1..4" => pricing } }
+              let(:price_five_to_nine) { { "5..9" => pricing } }
 
               it 'does not raise an ActiveRecord::RecordInvalid error' do
                 expect { subject }.to_not raise_error
@@ -157,8 +157,9 @@ module PricingDefinition
 
             context 'with infinite boundaries' do
               let(:prices) { [price_one_or_more, price_five_to_nine] }
-              let(:price_one_or_more) { { "1+" => "one_or_more" } }
-              let(:price_five_to_nine) { { "5..9" => "five_to_nine" } }
+              let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
+              let(:price_one_or_more) { { "1+" => pricing } }
+              let(:price_five_to_nine) { { "5..9" => pricing } }
 
               it 'does not raise an ActiveRecord::RecordInvalid error' do
                 expect { subject }.to_not raise_error
@@ -169,8 +170,9 @@ module PricingDefinition
           context 'with inconsistent sequence' do
             context 'with fixed boundaries' do
               let(:prices) { [price_one_to_four, price_six_to_nine] }
-              let(:price_one_to_four) { { "1..4" => "one_to_four" } }
-              let(:price_six_to_nine) { { "6..9" => "six_to_nine" } }
+              let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
+              let(:price_one_to_four) { { "1..4" => pricing } }
+              let(:price_six_to_nine) { { "6..9" => pricing } }
 
               it 'raises an ActiveRecord::RecordInvalid error' do
                 expect { subject }.to raise_error(ActiveRecord::RecordInvalid)
@@ -181,8 +183,9 @@ module PricingDefinition
 
             context 'with infinite boundaries' do
               let(:prices) { [price_one_to_four, price_six_or_more] }
-              let(:price_one_to_four) { { "1..4" => "one_to_four" } }
-              let(:price_six_or_more) { { "6+" => "six_or_more" } }
+              let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
+              let(:price_one_to_four) { { "1..4" => pricing } }
+              let(:price_six_or_more) { { "6+" => pricing } }
 
               it 'raises an ActiveRecord::RecordInvalid error' do
                 expect { subject }.to raise_error(ActiveRecord::RecordInvalid)
@@ -195,8 +198,9 @@ module PricingDefinition
           context 'without overlaping volumes' do
             context 'with fixed boundaries' do
               let(:prices) { [price_one_to_four, price_four_to_six] }
-              let(:price_one_to_four) { { "1..4" => "one_to_four" } }
-              let(:price_four_to_six) { { "5..6" => "four_to_six" } }
+              let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
+              let(:price_one_to_four) { { "1..4" => pricing } }
+              let(:price_four_to_six) { { "5..6" => pricing } }
 
               it 'does not raise an ActiveRecord::RecordInvalid error' do
                 expect { subject }.to_not raise_error
@@ -205,8 +209,9 @@ module PricingDefinition
 
             context 'with infinite boundaries' do
               let(:prices) { [price_one_to_four, price_five_or_more] }
-              let(:price_one_to_four) { { "1..4" => "one_to_four" } }
-              let(:price_five_or_more) { { "5+" => "five_or_more" } }
+              let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
+              let(:price_one_to_four) { { "1..4" => pricing } }
+              let(:price_five_or_more) { { "5+" => pricing } }
 
               it 'does not raise an ActiveRecord::RecordInvalid error' do
                 expect { subject }.to_not raise_error
@@ -217,8 +222,9 @@ module PricingDefinition
           context 'with overlaping volumes' do
             context 'with fixed boundaries' do
               let(:prices) { [price_one_to_four, price_four_to_six] }
-              let(:price_one_to_four) { { "1..4" => "one_to_four" } }
-              let(:price_four_to_six) { { "4..6" => "four_to_six" } }
+              let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
+              let(:price_one_to_four) { { "1..4" => pricing } }
+              let(:price_four_to_six) { { "4..6" => pricing } }
 
               it 'raises an ActiveRecord::RecordInvalid error' do
                 expect { subject }.to raise_error(ActiveRecord::RecordInvalid)
@@ -229,8 +235,9 @@ module PricingDefinition
 
             context 'with infinite boundaries' do
               let(:prices) { [price_one_or_more, price_four_to_six] }
-              let(:price_one_or_more) { { "1+" => "one_or_more" } }
-              let(:price_four_to_six) { { "4..6" => "four_to_six" } }
+              let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
+              let(:price_one_or_more) { { "1+" => pricing } }
+              let(:price_four_to_six) { { "4..6" => pricing } }
 
               it 'does not raise an ActiveRecord::RecordInvalid error' do
                 expect { subject }.to_not raise_error
@@ -243,8 +250,9 @@ module PricingDefinition
             let(:priceable) { ::TestPriceable.create! min_limit: 4, max_limit: 10, currency: :eur }
 
             let(:prices) { [price_one_or_more, price_four_to_six] }
-            let(:price_one_or_more) { { "1+" => "one_or_more" } }
-            let(:price_four_to_six) { { "4..6" => "four_to_six" } }
+            let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
+            let(:price_one_or_more) { { "1+" => pricing } }
+            let(:price_four_to_six) { { "4..6" => pricing } }
 
             it 'raises an ActiveRecord::RecordInvalid error' do
               expect { subject }.to raise_error(ActiveRecord::RecordInvalid)
@@ -258,8 +266,9 @@ module PricingDefinition
             let(:priceable) { ::TestPriceable.create! min_limit: 1, max_limit: 8, currency: :eur }
 
             let(:prices) { [price_one_or_more, price_four_to_nine] }
-            let(:price_one_or_more) { { "1+" => "one_or_more" } }
-            let(:price_four_to_nine) { { "4..9" => "four_to_nine" } }
+            let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
+            let(:price_one_or_more) { { "1+" => pricing } }
+            let(:price_four_to_nine) { { "4..9" => pricing } }
 
             it 'raises an ActiveRecord::RecordInvalid error' do
               expect { subject }.to raise_error(ActiveRecord::RecordInvalid)
