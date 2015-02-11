@@ -17,6 +17,8 @@ module PricingDefinition
         }
       end
 
+      self.table_name = 'pricing_definitions'
+
       serialize :definition
 
       belongs_to :priceable, polymorphic: true

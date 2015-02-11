@@ -5,7 +5,7 @@ ActiveRecord::Schema.define do
   self.verbose = false
 
   # TODO: add a generator for migrations
-  create_table :definitions, force: true do |t|
+  create_table :pricing_definitions, force: true do |t|
     t.date :starts_at, default: nil
     t.date :ends_at, default: nil
     t.integer :priceable_id, default: nil

@@ -16,7 +16,7 @@ module PricingDefinition
         attr_reader :options
 
         def setup_association
-          has_many :pricing_definitions, -> { order('definitions.weight DESC') },
+          has_many :pricing_definitions, -> { order("pricing_definitions.weight DESC") },
             as: :priceable,
             class_name: 'PricingDefinition::Resources::Definition',
             dependent: :destroy
