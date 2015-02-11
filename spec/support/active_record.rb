@@ -12,14 +12,14 @@ ActiveRecord::Schema.define do
     t.string :priceable_type, default: nil
     t.text :definition, default: {}
     t.integer :weight, default: 0
-    t.timestamps
+    t.timestamps null: false
   end
 
   create_table :test_priceables, force: true do |t|
     t.string :currency, default: nil
     t.integer :min_limit, default: 1
     t.integer :max_limit, default: nil
-    t.timestamps
+    t.timestamps null: false
   end
 end
 
