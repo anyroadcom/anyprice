@@ -41,9 +41,13 @@ module PricingDefinition
         where(predicates.join(' OR '), Time.now)
       end
 
-      def definition_with_ranges
-        @definition_with_ranges ||= definition.each_with_object({}) do |d, h|
-          h[volume_to_range(d[0])] = d[1]
+      def definition_with_ranges(cached = true)
+        if cached && @definition_with_ranges
+          @definition_with_ranges
+        else
+          @definition_with_ranges = definition.each_with_object({}) do |d, h|
+            h[volume_to_range(d[0])] = d[1]
+          end
         end
       end
 
