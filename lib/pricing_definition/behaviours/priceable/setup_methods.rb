@@ -20,6 +20,7 @@ module PricingDefinition
             as: :priceable,
             class_name: 'PricingDefinition::Resources::Definition',
             dependent: :destroy
+          accepts_nested_attributes_for :pricing_definitions
         end
 
         def setup_config!
