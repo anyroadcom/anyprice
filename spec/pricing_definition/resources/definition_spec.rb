@@ -104,10 +104,11 @@ module PricingDefinition
         subject { definition.definition_with_ranges }
 
         let(:definition) { create_definition! definition: prices.inject(:update) }
-        let(:prices) { [price_one_or_more, price_four_to_ten] }
+        let(:prices) { [price_one_or_more, price_four_to_ten, price_eleven_or_more] }
         let(:pricing) { { fixed: true, price:{ fixed: 11 }, deposit: 0 } }
         let(:price_one_or_more) { { "1+" => pricing } }
         let(:price_four_to_ten) { { "4..10" => pricing } }
+        let(:price_eleven_or_more) { { "11+" => pricing } }
 
         it 'returns a copy of definitions with ranges as keys' do
           expect(subject.keys[0]).to be_a(Range)
@@ -145,10 +146,11 @@ module PricingDefinition
 
           context 'without inconsistent sequence' do
             context 'with fixed boundaries' do
-              let(:prices) { [price_one_to_four, price_five_to_nine] }
+              let(:prices) { [price_one_to_four, price_five_to_nine, price_ten_or_more] }
               let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
               let(:price_one_to_four) { { "1..4" => pricing } }
               let(:price_five_to_nine) { { "5..9" => pricing } }
+              let(:price_ten_or_more) { { "10+" => pricing } }
 
               it 'does not raise an ActiveRecord::RecordInvalid error' do
                 expect { subject }.to_not raise_error
@@ -156,10 +158,11 @@ module PricingDefinition
             end
 
             context 'with infinite boundaries' do
-              let(:prices) { [price_one_or_more, price_five_to_nine] }
+              let(:prices) { [price_one_or_more, price_five_to_nine, price_ten_or_more] }
               let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
               let(:price_one_or_more) { { "1+" => pricing } }
               let(:price_five_to_nine) { { "5..9" => pricing } }
+              let(:price_ten_or_more) { { "10+" => pricing } }
 
               it 'does not raise an ActiveRecord::RecordInvalid error' do
                 expect { subject }.to_not raise_error
@@ -197,10 +200,11 @@ module PricingDefinition
 
           context 'without overlaping volumes' do
             context 'with fixed boundaries' do
-              let(:prices) { [price_one_to_four, price_four_to_six] }
+              let(:prices) { [price_one_to_four, price_four_to_six, price_seven_or_more] }
               let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
               let(:price_one_to_four) { { "1..4" => pricing } }
               let(:price_four_to_six) { { "5..6" => pricing } }
+              let(:price_seven_or_more) { { "7+" => pricing } }
 
               it 'does not raise an ActiveRecord::RecordInvalid error' do
                 expect { subject }.to_not raise_error
@@ -234,10 +238,11 @@ module PricingDefinition
             end
 
             context 'with infinite boundaries' do
-              let(:prices) { [price_one_or_more, price_four_to_six] }
+              let(:prices) { [price_one_or_more, price_four_to_six, price_seven_or_more] }
               let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
               let(:price_one_or_more) { { "1+" => pricing } }
               let(:price_four_to_six) { { "4..6" => pricing } }
+              let(:price_seven_or_more) { { "7+" => pricing } }
 
               it 'does not raise an ActiveRecord::RecordInvalid error' do
                 expect { subject }.to_not raise_error
@@ -245,35 +250,29 @@ module PricingDefinition
             end
           end
 
-          context 'with out of lower bounds priceable volumes' do
-            let(:definition) { build_definition priceable: priceable, definition: prices.inject(:update) }
-            let(:priceable) { ::TestPriceable.create! min_limit: 4, max_limit: 10, currency: :eur }
-
-            let(:prices) { [price_one_or_more, price_four_to_six] }
+          context 'without lowest boundary' do
+            let(:prices) { [price_four_to_six, price_seven_or_more] }
             let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
-            let(:price_one_or_more) { { "1+" => pricing } }
+            let(:price_four_to_six) { { "4..6" => pricing } }
+            let(:price_seven_or_more) { { "7+" => pricing } }
+
+            it 'raises an ActiveRecord::RecordInvalid error' do
+              expect { subject }.to raise_error(ActiveRecord::RecordInvalid)
+              expect(definition.errors).to include(:definition)
+              expect(definition.errors[:definition][0]).to include('insufficient_lowest_boundary')
+            end
+          end
+
+          context 'without highest boundary' do
+            let(:prices) { [price_one_to_three, price_four_to_six] }
+            let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
+            let(:price_one_to_three) { { "1..3" => pricing } }
             let(:price_four_to_six) { { "4..6" => pricing } }
 
             it 'raises an ActiveRecord::RecordInvalid error' do
               expect { subject }.to raise_error(ActiveRecord::RecordInvalid)
               expect(definition.errors).to include(:definition)
-              expect(definition.errors[:definition][0]).to include('out_of_bounds_lower')
-            end
-          end
-
-          context 'with out of higher bounds priceable volumes' do
-            let(:definition) { build_definition priceable: priceable, definition: prices.inject(:update) }
-            let(:priceable) { ::TestPriceable.create! min_limit: 1, max_limit: 8, currency: :eur }
-
-            let(:prices) { [price_one_or_more, price_four_to_nine] }
-            let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
-            let(:price_one_or_more) { { "1+" => pricing } }
-            let(:price_four_to_nine) { { "4..9" => pricing } }
-
-            it 'raises an ActiveRecord::RecordInvalid error' do
-              expect { subject }.to raise_error(ActiveRecord::RecordInvalid)
-              expect(definition.errors).to include(:definition)
-              expect(definition.errors[:definition][0]).to include('out_of_bounds_higher')
+              expect(definition.errors[:definition][0]).to include('insufficient_highest_boundary')
             end
           end
         end

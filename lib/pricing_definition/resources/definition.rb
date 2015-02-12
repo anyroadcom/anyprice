@@ -31,8 +31,8 @@ module PricingDefinition
       validate :definition_schema
       validate :definition_overlaping
       validate :definition_inconsistency
-      validate :definition_lower_bounds
-      validate :definition_higher_bounds
+      validate :definition_lowest_boundary
+      validate :definition_highest_boundary
 
       def self.available
         predicates = []
@@ -148,16 +148,15 @@ module PricingDefinition
         end
       end
 
-      def definition_lower_bounds
-        if lower_boundary < priceable.send(priceable_config[:minimum])
-          errors.add :definition, :out_of_bounds_lower
+      def definition_lowest_boundary
+        if lower_boundary > 1
+          errors.add :definition, :insufficient_lowest_boundary
         end
       end
 
-      def definition_higher_bounds
-        return if higher_boundary == Float::INFINITY
-        if higher_boundary > priceable.send(priceable_config[:maximum])
-          errors.add :definition, :out_of_bounds_higher
+      def definition_highest_boundary
+        if higher_boundary < Float::INFINITY
+          errors.add :definition, :insufficient_highest_boundary
         end
       end
 
