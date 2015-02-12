@@ -10,7 +10,7 @@ module PricingDefinition
           fixed: predicate { |n| [TrueClass, FalseClass].include?(n.class) },
           price: predicate { |n|
             n.is_a?(Hash) &&
-            [[:fixed], [:children, :adults]].include?(n.keys) &&
+            [[:fixed], [:adults, :fixed]].include?(n.keys.sort) &&
             n.values.all? { |v| v.is_a?(Integer) }
           },
           deposit: Integer
