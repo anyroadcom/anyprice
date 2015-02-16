@@ -8,6 +8,30 @@ module PricingDefinition
     describe Definition do
       let(:definition) { Definition.new }
 
+      describe '.prioritized' do
+        subject { Definition.prioritized }
+
+        let!(:high_priority) { create_definition! starts_at: '2014-12-01', ends_at: '2014-12-21', weight: 20 }
+        let!(:low_priority) { create_definition! starts_at: '2015-02-01', ends_at: '2015-02-28', weight: 10 }
+
+        it 'returns definitions ordered by weight in descending order' do
+          expect(subject[0]).to eq(high_priority)
+          expect(subject[1]).to eq(low_priority)
+        end
+      end
+
+      describe '.deprioritized' do
+        subject { Definition.deprioritized }
+
+        let!(:high_priority) { create_definition! starts_at: '2014-12-01', ends_at: '2014-12-21', weight: 20 }
+        let!(:low_priority) { create_definition! starts_at: '2015-02-01', ends_at: '2015-02-28', weight: 10 }
+
+        it 'returns definitions ordered by weight in ascending order' do
+          expect(subject[0]).to eq(low_priority)
+          expect(subject[1]).to eq(high_priority)
+        end
+      end
+
       describe '.available' do
         subject { Definition.available }
 
@@ -59,6 +83,48 @@ module PricingDefinition
             allow(definition).to receive(:interval).and_return(nil)
             expect(subject).to eq(true)
           end
+        end
+      end
+
+      describe '#pricing_collection' do
+        subject { definition.pricing_collection }
+
+        let(:definition) { create_definition! definition: prices.inject(:update) }
+        let(:prices) {[
+          { "1+"    => { fixed: false, price: { adult: 20, children: 10 }, deposit: 0 } },
+          { "4..10" => { fixed: false, price: { adult: 40, children: 50 }, deposit: 0 } },
+          { "11+"   => { fixed: false, price: { adult: 50, children: 60 }, deposit: 0 } }
+        ]}
+
+        it 'maps definition hash to an array of hashes with a :volume key' do
+          expect(subject).to be_a(Array)
+          expect(subject[0]).to eq({ "volume" => "1+", "fixed" => false, "price" => { "adult" => 20, "children" => 10}, "deposit" => 0 })
+          expect(subject[1]).to eq({ "volume" => "4..10", "fixed" => false, "price" => { "adult" => 40, "children" => 50}, "deposit" => 0 })
+          expect(subject[2]).to eq({ "volume" => "11+", "fixed" => false, "price" => { "adult" => 50, "children" => 60}, "deposit" => 0 })
+        end
+      end
+
+      describe '#pricing_collection=' do
+        subject { definition.definition }
+
+        before(:each) do
+          definition.pricing_collection=(collection)
+        end
+
+        let(:definition) { create_definition! }
+        let(:collection) {
+          {
+            "0" => { "volume" => "1+"   , "fixed" => false, "price" => { "adult" => 20, "children" => 10 }, "deposit" => 0 },
+            "1" => { "volume" => "4..10", "fixed" => false, "price" => { "adult" => 40, "children" => 50 }, "deposit" => 0 },
+            "2" => { "volume" => "11+"  , "fixed" => false, "price" => { "adult" => 50, "children" => 60 }, "deposit" => 0 }
+          }
+        }
+
+        it 'sets definition with a proper hash' do
+          expect(subject).to be_a(Hash)
+          expect(subject).to include("1+" => { "fixed" => false, "price" => { "adult" => 20, "children" => 10}, "deposit" => 0 })
+          expect(subject).to include("4..10" => { "fixed" => false, "price" => { "adult" => 40, "children" => 50}, "deposit" => 0 })
+          expect(subject).to include("11+" => { "fixed" => false, "price" => { "adult" => 50, "children" => 60}, "deposit" => 0 })
         end
       end
 
@@ -138,6 +204,86 @@ module PricingDefinition
         end
       end
 
+      describe '#erroneous_ranges' do
+        context 'after initialization' do
+          subject { Definition.new.erroneous_ranges }
+
+          it 'returns a hash with keys' do
+            expect(subject.keys).to include(:inconsistent)
+            expect(subject.keys).to include(:insufficient_highest_boundary)
+            expect(subject.keys).to include(:insufficient_lowest_boundary)
+            expect(subject.keys).to include(:overlapping)
+          end
+
+          it 'returns a hash with empty arrays as values' do
+            expect(subject.values.flatten.uniq).to eq([])
+          end
+        end
+
+        context 'after validation' do
+          subject { definition.erroneous_ranges }
+          let(:definition) { build_definition definition: prices.inject(:update) }
+
+          before(:each) do
+            definition.valid?
+          end
+
+          context 'with valid data' do
+            let(:prices) { [price_one_or_more] }
+            let(:price_one_or_more) { { "1+" => { fixed: true, price:{ fixed: 1 }, deposit: 0 } } }
+
+            it 'returns a hash with empty arrays as values' do
+              expect(subject.values.flatten.uniq).to eq([])
+            end
+          end
+
+          context 'with invalid data' do
+            context 'with inconsistent range sequence' do
+              let(:prices) { [
+                { "1..2" => { fixed: true, price:{ fixed: 1 }, deposit: 0 } },
+                { "6..7" => { fixed: true, price:{ fixed: 1 }, deposit: 0 } }
+              ]}
+
+              it 'sets values for the :inconsistent key' do
+                expect(subject[:inconsistent]).to include('1..2')
+                expect(subject[:inconsistent]).to include('6..7')
+              end
+            end
+
+            context 'with overlapping ranges' do
+              let(:prices) { [
+                { "1..2" => { fixed: true, price:{ fixed: 1 }, deposit: 0 } },
+                { "2..7" => { fixed: true, price:{ fixed: 1 }, deposit: 0 } }
+              ]}
+
+              it 'sets values for the :overlapping key' do
+                expect(subject[:overlapping]).to include('1..2')
+                expect(subject[:overlapping]).to include('2..7')
+              end
+            end
+
+            context 'with insufficient highest boundary' do
+              let(:prices) { [
+                { "1..2" => { fixed: true, price:{ fixed: 1 }, deposit: 0 } },
+                { "3..7" => { fixed: true, price:{ fixed: 1 }, deposit: 0 } }
+              ]}
+
+              it 'sets values for the :insufficient_highest_boundary key' do
+                expect(subject[:insufficient_highest_boundary][0]).to eq('3..7')
+              end
+            end
+
+            context 'with insufficient lowest boundary' do
+              let(:prices) { [{ "2..3" => { fixed: true, price:{ fixed: 1 }, deposit: 0 } }] }
+
+              it 'sets values for the :insufficient_lowest_boundary key' do
+                expect(subject[:insufficient_lowest_boundary][0]).to eq('2..3')
+              end
+            end
+          end
+        end
+      end
+
       describe '#save' do
         subject { definition.save! }
 
@@ -198,7 +344,7 @@ module PricingDefinition
             end
           end
 
-          context 'without overlaping volumes' do
+          context 'without overlapping volumes' do
             context 'with fixed boundaries' do
               let(:prices) { [price_one_to_four, price_four_to_six, price_seven_or_more] }
               let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
@@ -223,7 +369,7 @@ module PricingDefinition
             end
           end
 
-          context 'with overlaping volumes' do
+          context 'with overlapping volumes' do
             context 'with fixed boundaries' do
               let(:prices) { [price_one_to_four, price_four_to_six] }
               let(:pricing) { { fixed: true, price:{ fixed: 10 }, deposit: 0 } }
@@ -233,7 +379,7 @@ module PricingDefinition
               it 'raises an ActiveRecord::RecordInvalid error' do
                 expect { subject }.to raise_error(ActiveRecord::RecordInvalid)
                 expect(definition.errors).to include(:definition)
-                expect(definition.errors[:definition][0]).to include('overlaping')
+                expect(definition.errors[:definition][0]).to include('overlapping')
               end
             end
 

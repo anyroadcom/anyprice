@@ -16,11 +16,9 @@ module PricingDefinition
         attr_reader :options
 
         def setup_association
-          has_many :pricing_definitions, -> { order("pricing_definitions.weight DESC") },
-            as: :priceable,
-            class_name: 'PricingDefinition::Resources::Definition',
-            dependent: :destroy
-          accepts_nested_attributes_for :pricing_definitions
+          has_many :pricing_definitions, as: :priceable, class_name: 'PricingDefinition::Resources::Definition', dependent: :destroy
+          accepts_nested_attributes_for :pricing_definitions, allow_destroy: true
+          validates_associated :pricing_definitions
         end
 
         def setup_config!

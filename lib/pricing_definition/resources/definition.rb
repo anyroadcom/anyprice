@@ -1,4 +1,5 @@
 require 'active_record'
+require 'active_support/core_ext/hash/indifferent_access'
 require 'rschema'
 
 module PricingDefinition
@@ -17,7 +18,12 @@ module PricingDefinition
         }
       end
 
+      attr_reader :erroneous_ranges
+
       self.table_name = 'pricing_definitions'
+
+      scope :prioritized, -> { order('weight DESC') }
+      scope :deprioritized, -> { order('weight ASC') }
 
       serialize :definition
 
@@ -29,10 +35,13 @@ module PricingDefinition
       validate :starts_at_validity, if: 'starts_at.present?'
       validate :definition_present
       validate :definition_schema
-      validate :definition_overlaping
+      validate :definition_overlapping
       validate :definition_inconsistency
       validate :definition_lowest_boundary
       validate :definition_highest_boundary
+
+      after_initialize :set_defaults
+      after_validation :normalize_errorneous_ranges
 
       def self.available
         predicates = []
@@ -73,7 +82,31 @@ module PricingDefinition
         end
       end
 
+      def pricing_collection
+        definition.map do |volume, pricing|
+          { "volume" => volume }.merge(pricing).with_indifferent_access
+        end
+      end
+
+      def pricing_collection=(value)
+        self.definition = value.each_with_object({}) do |(i, pricing), hash|
+          pricing = pricing.with_indifferent_access
+          hash[pricing[:volume]] = pricing
+          hash[pricing[:volume]][:fixed] = !!pricing[:fixed].to_s.match(/1|true/)
+          hash[pricing[:volume]].delete(:volume)
+        end
+      end
+
       private
+
+      def set_defaults
+        @erroneous_ranges = {
+          inconsistent: [],
+          overlapping: [],
+          insufficient_lowest_boundary: [],
+          insufficient_highest_boundary: []
+        }
+      end
 
       def volume_to_range(vol)
         if vol.match(/\d+\+/)
@@ -126,13 +159,15 @@ module PricingDefinition
         ranges.map!.with_index { |r,i| [r, ranges[(i + 1)]] }
       end
 
-      def definition_overlaping
+      def definition_overlapping
         definition_ranges_combined.each do |pair|
           return if pair[1].nil?
           diff = pair[0].end - pair[1].begin
 
           if diff > -1 && diff != Float::INFINITY
-            errors.add :definition, :overlaping
+            @erroneous_ranges[:overlapping] << pair[0].to_s
+            @erroneous_ranges[:overlapping] << pair[1].to_s
+            errors.add :definition, :overlapping
           end
         end
       end
@@ -141,6 +176,8 @@ module PricingDefinition
         definition_ranges_combined.each do |pair|
           return if pair[1].nil?
           if pair[0].end - pair[1].begin < -1
+            @erroneous_ranges[:inconsistent] << pair[0].to_s
+            @erroneous_ranges[:inconsistent] << pair[1].to_s
             errors.add :definition, :inconsistent
           end
         end
@@ -154,19 +191,21 @@ module PricingDefinition
 
       def definition_lowest_boundary
         if lower_boundary > 1
+          @erroneous_ranges[:insufficient_lowest_boundary] << definition_sorted(:asc).first[0].try(:to_s)
           errors.add :definition, :insufficient_lowest_boundary
         end
       end
 
       def definition_highest_boundary
         if higher_boundary < Float::INFINITY
+          @erroneous_ranges[:insufficient_highest_boundary] << definition_sorted(:desc).first[0].try(:to_s)
           errors.add :definition, :insufficient_highest_boundary
         end
       end
 
       def definition_schema
         definition.each do |volume, pricing|
-          errors.add :definition, :invalid_schema unless valid_schema?(pricing)
+          #errors.add :definition, :invalid_schema unless valid_schema?(pricing)
           errors.add :definition, :invalid_volume unless valid_volume?(volume)
         end
       end
@@ -176,7 +215,8 @@ module PricingDefinition
       end
 
       def valid_schema?(pricing)
-        RSchema.validate!(PRICING_SCHEMA, pricing)
+        coerced_pricing = RSchema.coerce!(PRICING_SCHEMA, pricing)
+        RSchema.validate!(PRICING_SCHEMA, coerced_pricing)
       rescue
         false
       end
@@ -187,6 +227,12 @@ module PricingDefinition
 
       def setup
         PricingDefinition::Configuration.setup[:priceables]
+      end
+
+      def normalize_errorneous_ranges
+        @erroneous_ranges.each do |key, ranges|
+          @erroneous_ranges[key] = ranges.uniq
+        end
       end
     end
   end

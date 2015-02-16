@@ -1,32 +1,28 @@
-require 'ostruct' unless defined?(OpenStruct)
+require 'active_support/inflector'
 
 module PricingDefinition
   class Configuration
-    @@resource_types = [
-      :modifiers,
-      :priceables
-    ]
+    @@configuration  = { modifiers: [], priceables: [], variant_pricing_schemas: [] }
 
-    @@configuration = {
-      :modifiers  => [],
-      :priceables => []
-    }
+    def self.configure
+      yield(self)
+    end
 
-    def self.setup
-      @@configuration
+    def self.config
+      @@configuration.dup
     end
 
     def self.add(resource_type, opts = {})
-      type = case resource_type
-             when :modifier  then :modifiers
-             when :priceable then :priceables
-             end
+      type = "#{resource_type}".pluralize
+      @@configuration[type.to_sym] << opts
+    end
 
-      @@configuration[type] << opts
+    def self.add_variant_pricing_schema(*args)
+      @@configuration[:variant_pricing_schemas] << args
     end
 
     class << self
-      @@resource_types.each do |config_attr|
+      [:modifiers, :priceables].each do |config_attr|
         instance_eval do
           define_method(config_attr) do
             @@configuration[config_attr]
