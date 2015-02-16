@@ -8,11 +8,31 @@ module PricingDefinition
     describe Priceable do
       let(:priceable_klass) { ::TestPriceable }
 
-      describe '#pricing_definitions' do
-        subject { priceable.pricing_definitions }
-
+      describe '#has_default_pricing_definition?' do
         let(:priceable) { priceable_klass.create! currency: :eur, min_limit: 1, max_limit: 4 }
-        let!(:high_priority) { create_definition! priceable: priceable, weight: 20 }
+
+        context 'with default pricing definition' do
+          before(:each) do
+            create_definition! priceable: priceable, starts_at: nil, ends_at: nil
+          end
+
+          it 'returns true' do
+            expect(priceable.reload).to have_default_pricing_definition
+          end
+        end
+
+        context 'without default pricing definition' do
+          it 'returns false' do
+            expect(priceable.reload).to_not have_default_pricing_definition
+          end
+        end
+      end
+
+      describe '#pricing_definitions' do
+        subject { priceable.reload.pricing_definitions }
+
+        let!(:priceable) { priceable_klass.create! currency: :eur, min_limit: 1, max_limit: 4 }
+        let!(:high_priority) { create_definition! priceable: priceable, weight: 20, starts_at: '2015-01-01', ends_at: '2015-02-01' }
         let!(:low_priority) { create_definition! priceable: priceable, weight: 10 }
 
         it 'returns pricing definitions order by weight in descening order' do
