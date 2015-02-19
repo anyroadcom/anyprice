@@ -1,6 +1,11 @@
 class TestPriceable < ActiveRecord::Base
   include PricingDefinition::Behaviours::Priceable
-  priceable minimum: :min_limit, maximum: :max_limit, currency: :currency
+  priceable
+end
+
+class Priceable < ActiveRecord::Base
+  include PricingDefinition::Behaviours::Priceable
+  self.table_name = :test_priceables
 end
 
 def create_definition!(args = {})

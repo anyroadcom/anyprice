@@ -3,10 +3,11 @@ module PricingDefinition
     module Priceable
       module SetupMethods
 
-        ALLOWED_OPTION_KEYS = [:primary, :addon, :for, :minimum, :maximum, :currency]
+        ALLOWED_OPTION_KEYS = [:addon_for]
 
         def priceable(options = {})
           @options = options
+          validate_options!
           setup_association
           setup_config!
         end
@@ -22,20 +23,13 @@ module PricingDefinition
         end
 
         def setup_config!
-          validate_options!
-          config.add :priceable, priceable_opts
+          config.set! :priceable, self, options
         end
 
         def validate_options!
           unless (options.keys - ALLOWED_OPTION_KEYS).empty?
             raise ArgumentError, "Invalid keys for priceable"
           end
-        end
-
-        def priceable_opts
-          @priceable_opts ||= {
-            active_record: self, primary: true, addon: false
-          }.merge(options)
         end
 
         def config

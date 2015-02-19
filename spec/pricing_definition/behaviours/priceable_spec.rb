@@ -5,18 +5,15 @@ require 'support/helpers'
 module PricingDefinition
   module Behaviours
     describe Priceable, order: :defined do
-      let(:configure_klass) { PricingDefinition::Configuration }
-      let(:priceable_klass) { ::TestPriceable }
+      let(:config_klass) { PricingDefinition::Configuration }
+      let(:priceable_klass) { ::Priceable }
 
-      class ::PriceableA < ActiveRecord::Base
-        self.table_name = :test_priceables
-        include PricingDefinition::Behaviours::Priceable
+      before(:each) do
       end
 
       context 'priceable behaviour' do
         subject { priceable_klass.priceable(priceable_options) }
-
-        let(:priceable_options) { { minimum: :min_limit, maximum: :max_limit, currency: :currency } }
+        let(:priceable_options) { {} }
 
         it 'associates priceable model with PriceDefinition::Resources::Definition' do
           subject
@@ -26,14 +23,21 @@ module PricingDefinition
           expect(association.options[:as]).to eq(:priceable)
         end
 
-        it 'adds configuration for priceable' do
-          subject
-          priceable_config = configure_klass.priceables.detect { |ar| ar[:active_record] == priceable_klass }
-          expect(priceable_config[:primary]).to eq(true)
-          expect(priceable_config[:addon]).to eq(false)
-          expect(priceable_config[:maximum]).to eq(:max_limit)
-          expect(priceable_config[:minimum]).to eq(:min_limit)
-          expect(priceable_config[:currency]).to eq(:currency)
+        context 'with invalid option keys' do
+          let(:priceable_options) { { invalid: :option } }
+
+          it 'adds configuration for priceable' do
+            expect { subject }.to raise_error(ArgumentError)
+          end
+        end
+
+        context 'with valid option keys' do
+          let(:priceable_options) { { addon_for: :a_model } }
+
+          it 'marks host class as priceable' do
+            subject
+            expect(config_klass.behaviour_for(priceable_klass)).to eq(:priceable)
+          end
         end
       end
     end
