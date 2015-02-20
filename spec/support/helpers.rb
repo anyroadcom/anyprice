@@ -9,14 +9,14 @@ class Priceable < ActiveRecord::Base
 end
 
 def create_definition!(args = {})
-  PricingDefinition::Resources::Definition.create! default_args.merge(args)
+  PricingDefinition::Resources::Definition.create! default_price_definition_args.merge(args)
 end
 
 def build_definition(args = {})
-  PricingDefinition::Resources::Definition.new default_args.merge(args)
+  PricingDefinition::Resources::Definition.new default_price_definition_args.merge(args)
 end
 
-def default_args
+def default_price_definition_args
   {
     definition: {
       '1+' => {
@@ -27,4 +27,12 @@ def default_args
     },
     priceable: TestPriceable.create!(min_limit: 1, max_limit: 20)
   }
+end
+
+class ModifierWithoutRequiredAttributes < ActiveRecord::Base
+  include PricingDefinition::Behaviours::PriceableModifier
+end
+
+class ModifierWithRequiredAttributes < ActiveRecord::Base
+  include PricingDefinition::Behaviours::PriceableModifier
 end
