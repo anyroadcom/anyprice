@@ -21,6 +21,18 @@ ActiveRecord::Schema.define do
     t.integer :max_limit, default: nil
     t.timestamps null: false
   end
+
+  create_table :modifier_without_required_attributes, force: true do |t|
+    t.timestamps null: false
+  end
+
+  create_table :modifier_with_required_attributes, force: true do |t|
+    t.boolean :additive, default: false
+    t.boolean :fixed, default: false
+    t.integer :amount, default: 1
+    t.string :currency
+    t.timestamps null: false
+  end
 end
 
 RSpec.configure do |config|
