@@ -12,7 +12,7 @@ module PricingDefinition
         context 'with invalid option keys' do
           let(:options) { { unsupported: :configuration } }
 
-          it 'does not raise an error' do
+          it 'raises an error' do
             expect { subject }.to raise_error
           end
         end
