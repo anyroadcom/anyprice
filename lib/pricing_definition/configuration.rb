@@ -6,9 +6,10 @@ module PricingDefinition
     class Setup < OpenStruct; end
     class SetupEntry < OpenStruct; end
 
-    SUPPORTED_BEHAVIOURS = [:priceable, :priceable_modifier].freeze
+    SUPPORTED_BEHAVIOURS = [:priceable, :priceable_modifier, :priceable_calculator].freeze
 
     @configuration = Setup.new(
+      priceable_calculators: [],
       priceable_modifiers: [],
       priceables: [],
       priceables_pricing_schemas: []
@@ -29,12 +30,18 @@ module PricingDefinition
         end
       end
 
+      def get(behaviour, klass)
+        ensure_behaviour(behaviour) do
+          get_setup_entry(behaviour, klass)
+        end
+      end
+
       def add_pricing_schema(*args)
         configuration.priceables_pricing_schemas << args
       end
 
       def behaviour_for(resource)
-        [:priceables, :priceable_modifiers].detect do |behaviour|
+        [:priceables, :priceable_modifiers, :priceable_calculators].detect do |behaviour|
           if config.send(behaviour).detect { |r| r.resource == resource }
             return singularize(behaviour)
           end
@@ -56,6 +63,10 @@ module PricingDefinition
         options = { resource: klass }.merge(options)
         behaviour = pluralize(behaviour)
         config.send(behaviour) << SetupEntry.new(options)
+      end
+
+      def get_setup_entry(behaviour, klass)
+        config.send(pluralize(behaviour)).detect { |c| c.resource == klass }
       end
 
       def ensure_behaviour(behaviour, opts = { silent: false }, &block)

@@ -3,7 +3,7 @@ require 'spec_helper'
 module PricingDefinition
   describe Configuration do
     before(:each) do
-      expect(Configuration::SUPPORTED_BEHAVIOURS).to eq([:priceable, :priceable_modifier])
+      expect(Configuration::SUPPORTED_BEHAVIOURS).to eq([:priceable, :priceable_modifier, :priceable_calculator])
     end
 
     describe '.config' do
@@ -50,7 +50,7 @@ module PricingDefinition
 
     describe '.behaviour_for' do
       subject { Configuration.behaviour_for(klass) }
-      let(:config) { Configuration::Setup.new(priceables: [config_entry], priceable_modifiers: []) }
+      let(:config) { Configuration::Setup.new(priceables: [config_entry], priceable_modifiers: [], priceable_calculators: []) }
       let(:config_entry) { Configuration::SetupEntry.new(resource: String) }
 
       before(:each) do
@@ -76,7 +76,7 @@ module PricingDefinition
 
     describe '.behaviour_for?' do
       subject { Configuration.behaviour_for?(klass, behaviour_type) }
-      let(:config) { Configuration::Setup.new(priceables: [config_entry], priceable_modifiers: []) }
+      let(:config) { Configuration::Setup.new(priceables: [config_entry], priceable_modifiers: [], priceable_calculators: []) }
       let(:config_entry) { Configuration::SetupEntry.new(resource: klass) }
       let(:klass) { String }
 

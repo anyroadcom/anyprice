@@ -36,3 +36,20 @@ end
 class ModifierWithRequiredAttributes < ActiveRecord::Base
   include PricingDefinition::Behaviours::PriceableModifier
 end
+
+class TestModifier < ActiveRecord::Base
+  self.table_name = :modifier_with_required_attributes
+  include PricingDefinition::Behaviours::PriceableModifier
+  priceable_modifier for: :test_priceable, weight: 10, label: :label, description: :description
+end
+
+class AcmeOrder < ActiveRecord::Base
+  include PricingDefinition::Behaviours::PriceableCalculator
+
+  belongs_to :test_priceable
+  belongs_to :test_modifier
+
+  def test_addon
+
+  end
+end

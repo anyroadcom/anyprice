@@ -15,6 +15,15 @@ ActiveRecord::Schema.define do
     t.timestamps null: false
   end
 
+  create_table :pricing_payments, force: true do |t|
+    t.integer :priceable_calculator_id
+    t.string :priceable_calculator_type
+    t.timestamps null: false
+  end
+
+  add_index :pricing_payments, [:priceable_calculator_id, :priceable_calculator_type], name: 'pricing_payments_calculator_poly_index'
+
+  # NOTE these are used only in specs
   create_table :test_priceables, force: true do |t|
     t.string :currency, default: nil
     t.integer :min_limit, default: 1
@@ -30,9 +39,21 @@ ActiveRecord::Schema.define do
     t.boolean :additive, default: false
     t.boolean :fixed, default: false
     t.integer :amount, default: 1
+    t.string :label
+    t.string :description
     t.string :currency
     t.timestamps null: false
   end
+
+  create_table :acme_orders, force: true do |t|
+    t.integer :quantity, default: 0
+    t.integer :test_priceable_id
+    t.integer :modifier_with_required_attribute_id
+    t.date :request_date
+    t.timestamps null: false
+  end
+  add_index :acme_orders, :test_priceable_id
+  add_index :acme_orders, :modifier_with_required_attribute_id
 end
 
 RSpec.configure do |config|
