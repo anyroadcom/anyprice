@@ -65,7 +65,7 @@ module PricingDefinition
           if d[0].cover?(volume)
             h[:volume] = d[0]
             h[:pricing] = d[1]
-            h[:currency] = :eur
+            h[:currency] = priceable.send(priceable_config.currency)
             return h
           else
             next
@@ -227,6 +227,10 @@ module PricingDefinition
         @erroneous_ranges.each do |key, ranges|
           @erroneous_ranges[key] = ranges.uniq
         end
+      end
+
+      def priceable_config
+        Configuration.get(:priceable, priceable.class)
       end
     end
   end

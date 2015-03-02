@@ -1,6 +1,6 @@
 class TestPriceable < ActiveRecord::Base
   include PricingDefinition::Behaviours::Priceable
-  priceable
+  priceable currency: :currency
 end
 
 class Priceable < ActiveRecord::Base

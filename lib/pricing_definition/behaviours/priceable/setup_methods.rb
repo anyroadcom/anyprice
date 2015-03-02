@@ -3,7 +3,7 @@ module PricingDefinition
     module Priceable
       module SetupMethods
 
-        ALLOWED_OPTION_KEYS = [:addon_for]
+        ALLOWED_OPTION_KEYS = [:addon_for, :currency]
 
         def priceable(options = {})
           @options = options
