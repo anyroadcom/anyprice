@@ -11,9 +11,13 @@ module PricingDefinition
 
       before(:each) do
         ::AcmeOrder.priceable_calculator(priceable_calculator_options) do |config|
-          config.add_party :acme_inc, currency: "USD", name: "ACME Inc.", base: true
-          config.add_party :business, currency: :currency, name: :name
+          config.add_party :acme_inc, currency: "USD", type: :charge
+          config.add_party :business, currency: :currency, type: :base
         end
+      end
+
+      describe '#initialize' do
+        subject { Calculator.new(acme_order) }
       end
 
       describe '#resource' do
@@ -28,10 +32,17 @@ module PricingDefinition
         subject { calculator.pricing_definition }
         let(:pricing_definition) { create_definition! }
         let(:priceable) { pricing_definition.priceable }
+        let(:interval_start) { Date.today }
 
         before(:each) do
           allow(acme_order).to receive(:test_priceable).and_return(priceable)
           allow(priceable).to receive(:pricing_definition).and_return(pricing_definition)
+          allow(calculator).to receive(:interval_start).and_return(interval_start)
+        end
+
+        it 'returns the pricing definition for provided interval' do
+          subject
+          expect(priceable).to have_received(:pricing_definition).with(interval_start)
         end
 
         it 'returns the pricing definition for priceable' do
@@ -45,16 +56,48 @@ module PricingDefinition
 
         it 'returns the associated priceable object' do
           allow(acme_order).to receive(:test_priceable).and_return(test_priceable)
-          expect(subject).to eq(acme_order.test_priceable)
+          expect(subject).to eq(test_priceable)
+        end
+      end
+
+      describe '#interval_start' do
+        subject { calculator.interval_start }
+        let(:date) { Date.new(2016, 01, 01) }
+
+        it 'returns the associated priceable object' do
+          allow(acme_order).to receive(:request_date).and_return(date)
+          expect(subject).to eq(date)
+        end
+      end
+
+      describe '#overall_volume' do
+        subject { calculator.overall_volume }
+        let(:volume) { { a: 1, b: 2, c: 3} }
+
+        it 'returns the sum of all #volume values' do
+          allow(calculator).to receive(:volume).and_return(volume)
+          expect(subject).to eq(6)
+        end
+      end
+
+      describe '#volume' do
+        subject { calculator.volume }
+        let(:volume) { { guests: 9 } }
+
+        it 'returns resource volume' do
+          allow(acme_order).to receive(:quantity).and_return(volume)
+          expect(subject).to eq(volume)
         end
       end
 
       describe '#parties' do
         subject { calculator.parties }
+        let(:acme_inc_party) { Calculator::Party.new(acme_order, name: :acme_inc, type: :charge, currency: "USD") }
+        let(:business_party) { Calculator::Party.new(acme_order, name: :business, type: :base, currency: :currency) }
 
-        it 'returns the partires with their configuration' do
-          expect(subject[:acme_inc]).to include(currency: "USD", name: "ACME Inc.", base: true)
-          expect(subject[:business]).to include(currency: :currency, name: :name)
+        it 'returns the a collection of Calculator::Party instances' do
+          expect(subject).to include(acme_inc_party)
+          expect(subject).to include(business_party)
         end
       end
 
