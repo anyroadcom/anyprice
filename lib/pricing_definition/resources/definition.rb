@@ -43,11 +43,11 @@ module PricingDefinition
       after_initialize :set_defaults
       after_validation :normalize_errorneous_ranges
 
-      def self.available
+      def self.available(interval = nil)
         predicates = []
         predicates << '(? BETWEEN starts_at AND ends_at)'
         predicates << '(starts_at IS NULL and ends_at IS NULL)'
-        where(predicates.join(' OR '), Time.now)
+        where(predicates.join(' OR '), interval || Time.now)
       end
 
       def definition_with_ranges(cached = true)

@@ -2,8 +2,12 @@ module PricingDefinition
   module Behaviours
     module Priceable
       module InstanceMethods
-        def pricing_definition
-          pricing_definitions.available.prioritized.first
+        def pricing_definition(interval = nil)
+          if interval.present? && !interval.is_a?(Date)
+            raise ArgumentError, "interval provided must be a Date"
+          else
+            pricing_definitions.available(interval).prioritized.first
+          end
         end
 
         def has_default_pricing_definition?
