@@ -27,7 +27,7 @@ module PricingDefinition
           @priceable_calculator_config_block = block
 
           validate_options!
-          validate_config_block!
+          validate_configuration!
           setup_config!
           setup_instance_methods
 
@@ -35,7 +35,7 @@ module PricingDefinition
         end
 
         def validate_options!
-          ensure!("Invalid options keys for priceable calculator") do
+          ensure!("Invalid option keys for priceable calculator") do
             (priceable_calculator_options.keys - ALLOWED_OPTION_KEYS).empty?
           end
 
@@ -48,10 +48,14 @@ module PricingDefinition
           end
         end
 
-        def validate_config_block!
+        def validate_configuration!
           ensure!("You need to provide a configuration block") do
             priceable_calculator_config_block.is_a?(Proc)
           end
+        end
+
+        def priceable_calculator_config
+          @priceable_calculator_config ||= pricing_config.get(:priceable_calculator, self)
         end
 
         private
@@ -96,10 +100,6 @@ module PricingDefinition
 
         def priceable_config
           @priceable_config ||= pricing_config.get(:priceable, priceable_klass)
-        end
-
-        def priceable_calculator_config
-          @priceable_calculator_config ||= pricing_config.get(:priceable_calculator, self)
         end
       end
     end
