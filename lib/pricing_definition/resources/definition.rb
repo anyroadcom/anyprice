@@ -65,6 +65,7 @@ module PricingDefinition
           if d[0].cover?(volume)
             h[:volume] = d[0]
             h[:pricing] = d[1]
+            h[:currency] = :eur
             return h
           else
             next
@@ -205,7 +206,8 @@ module PricingDefinition
 
       def definition_schema
         definition.each do |volume, pricing|
-          #errors.add :definition, :invalid_schema unless valid_schema?(pricing)
+          # TODO: fix this at some point...
+          # errors.add :definition, :invalid_schema unless valid_schema?(pricing)
           errors.add :definition, :invalid_volume unless valid_volume?(volume)
         end
       end
@@ -219,14 +221,6 @@ module PricingDefinition
         RSchema.validate!(PRICING_SCHEMA, coerced_pricing)
       rescue
         false
-      end
-
-      def priceable_config
-        setup.detect { |p| p[:active_record] == priceable.class }
-      end
-
-      def setup
-        PricingDefinition::Configuration.setup[:priceables]
       end
 
       def normalize_errorneous_ranges
