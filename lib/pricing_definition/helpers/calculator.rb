@@ -39,6 +39,10 @@ module PricingDefinition
         priceable.pricing_definition(interval_start)
       end
 
+      def pricing_rule
+        pricing_definition.for_volume(overall_volume)
+      end
+
       def currencies
         parties.map { |p| p.currency.downcase.to_sym }
       end

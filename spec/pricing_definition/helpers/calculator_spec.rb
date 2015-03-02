@@ -49,6 +49,29 @@ module PricingDefinition
         end
       end
 
+      describe '#pricing_rule' do
+        subject { calculator.pricing_rule }
+        let(:pricing) { create_definition! definition: definition }
+        let(:overall_volume) { 8 }
+        let(:definition) {
+          {
+            '1+' => { fixed: false, price: { adults: 1000, children: 800 }, deposit: 0 },
+            '2..4' => { fixed: false, price: { adults: 900, children: 700 }, deposit: 100 },
+            '5..8' => { fixed: false, price: { adults: 800, children: 600 }, deposit: 200 },
+            '9+' => { fixed: true, price: { fixed: 50000 }, deposit: 2000 }
+          }
+        }
+
+        it 'returns rule for matching volume' do
+          allow(calculator).to receive(:pricing_definition).and_return(pricing)
+          allow(calculator).to receive(:overall_volume).and_return(overall_volume)
+          rule = subject[:pricing]
+          expect(rule[:fixed]).to eq(false)
+          expect(rule[:price]).to include(adults: 800, children: 600)
+          expect(rule[:deposit]).to eq(200)
+        end
+      end
+
       describe '#charge_currency' do
         subject { calculator.charge_currency }
 
