@@ -49,6 +49,32 @@ module PricingDefinition
         end
       end
 
+      describe '#charge_currency' do
+        subject { calculator.charge_currency }
+
+        it 'returns the currency of the charge party' do
+          expect(subject).to eq('eur')
+        end
+      end
+
+      describe '#base_currency' do
+        subject { calculator.base_currency }
+        let(:business) { double(currency: currency) }
+        let(:currency) { 'gbp' }
+
+        it 'returns the currency of the base party' do
+          expect(subject).to eq(currency)
+        end
+      end
+
+      describe '#currencies' do
+        subject { calculator.currencies }
+
+        it 'returns a collection containing all involved currencies' do
+          expect(subject).to include(:eur, :usd)
+        end
+      end
+
       describe '#priceable' do
         subject { calculator.priceable }
         let(:test_priceable) { ::TestPriceable.new }

@@ -14,9 +14,20 @@ module PricingDefinition
         setup_parties!
       end
 
+      # Define delegator methods for @resource attributes
       [:priceable, :interval_start, :volume].each do |method_name|
         define_method method_name do
           resource.send calculator_config.send(method_name)
+        end
+      end
+
+      [:base, :charge].each do |attr|
+        define_method("#{attr}_party") do
+          parties.detect { |p| p.send("#{attr}?") }
+        end
+
+        define_method("#{attr}_currency") do
+          send("#{attr}_party").try(:currency)
         end
       end
 
@@ -28,8 +39,8 @@ module PricingDefinition
         priceable.pricing_definition(interval_start)
       end
 
-      def base_currency
-        base_party.currency
+      def currencies
+        parties.map { |p| p.currency.downcase.to_sym }
       end
 
       def modifiers
