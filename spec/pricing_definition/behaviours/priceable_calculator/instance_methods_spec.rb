@@ -8,11 +8,13 @@ module PricingDefinition
       describe InstanceMethods do
         let(:klass) { ::AcmeOrder }
         let(:priceable_calculator_options) { { priceable: :test_priceable, priceable_addons: [:test_addon], priceable_modifiers: [:test_modifier], volume: :quantity, interval_start: :request_date } }
+        let(:business) { double(currency: 'usd', title: 'Business Inc.') }
 
         before(:each) do
+          allow_any_instance_of(klass).to receive(:business).and_return(business)
           klass.priceable_calculator(priceable_calculator_options) do |config|
-            config.add_party :acme_inc, currency: "USD", name: "ACME Inc.", base: true
-            config.add_party :business, currency: :currency, name: :name
+            config.add_party :acme_inc, source: :self, currency: 'eur', type: :charge
+            config.add_party :business, currency: :currency, type: :base
           end
         end
 

@@ -53,7 +53,8 @@ module PricingDefinition
       def setup_parties!
         config_parties.each do |name, options|
           party_options = { name: name }.merge(options)
-          (@parties ||= []) << Calculator::Party.new(resource, party_options)
+          party_resource = (options[:source] == :self) ? resource : resource.send(name)
+          (@parties ||= []) << Calculator::Party.new(party_resource, party_options)
         end
       end
     end

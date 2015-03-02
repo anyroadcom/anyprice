@@ -5,19 +5,18 @@ require 'support/helpers'
 module PricingDefinition
   module Helpers
     describe Calculator do
+      let(:acme_order) { klass.new }
+      let(:business) { double(currency: 'usd', title: 'Business Inc.') }
       let(:calculator) { PricingDefinition::Helpers::Calculator.new(acme_order) }
-      let(:acme_order) { ::AcmeOrder.new }
+      let(:klass) { ::AcmeOrder }
       let(:priceable_calculator_options) { { priceable: :test_priceable, priceable_addons: [:test_addon], priceable_modifiers: [:test_modifier], volume: :quantity, interval_start: :request_date } }
 
       before(:each) do
-        ::AcmeOrder.priceable_calculator(priceable_calculator_options) do |config|
-          config.add_party :acme_inc, currency: "USD", type: :charge
+        allow(acme_order).to receive(:business).and_return(business)
+        klass.priceable_calculator(priceable_calculator_options) do |config|
+          config.add_party :acme_inc, source: :self, currency: 'eur', type: :charge
           config.add_party :business, currency: :currency, type: :base
         end
-      end
-
-      describe '#initialize' do
-        subject { Calculator.new(acme_order) }
       end
 
       describe '#resource' do
@@ -92,8 +91,8 @@ module PricingDefinition
 
       describe '#parties' do
         subject { calculator.parties }
-        let(:acme_inc_party) { Calculator::Party.new(acme_order, name: :acme_inc, type: :charge, currency: "USD") }
-        let(:business_party) { Calculator::Party.new(acme_order, name: :business, type: :base, currency: :currency) }
+        let(:acme_inc_party) { Calculator::Party.new(acme_order, name: :acme_inc, source: :self, currency: 'eur', type: :charge) }
+        let(:business_party) { Calculator::Party.new(business, name: :business, type: :base, currency: :currency) }
 
         it 'returns the a collection of Calculator::Party instances' do
           expect(subject).to include(acme_inc_party)
