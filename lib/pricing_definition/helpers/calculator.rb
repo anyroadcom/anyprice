@@ -1,5 +1,6 @@
 require 'active_support/core_ext/module/delegation'
-require 'pricing_definition/helpers/calculator/party'
+require "pricing_definition/helpers/calculator/party"
+require "pricing_definition/helpers/calculator/pricing_rule"
 
 module PricingDefinition
   module Helpers
