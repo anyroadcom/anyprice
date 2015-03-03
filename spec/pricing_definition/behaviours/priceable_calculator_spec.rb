@@ -20,7 +20,7 @@ module PricingDefinition
 
           context 'without required attributes' do
             subject { klass.priceable_calculator(priceable_calculator_options) { } }
-            let(:priceable_calculator_options) { { priceable: [:test_priceable], priceable_addons: [:test_addon], volume: :some_quantity, interval_start: :some_request_date } }
+            let(:priceable_calculator_options) { { priceable: :test_priceable, priceable_addons: [:test_addon], priceable_modifiers: [:test_modifier], volume: :some_quantity, interval_start: :some_request_date } }
 
             it 'raises an error' do
               expect(klass.attribute_names).to_not include("some_quantity")
@@ -38,7 +38,7 @@ module PricingDefinition
             end
 
             let(:behaviour) { PricingDefinition::Configuration.behaviour_for(klass) }
-            let(:priceable_calculator_options) { { priceable: :test_priceable, priceable_addons: [:test_addon], volume: :quantity, interval_start: :request_date } }
+            let(:priceable_calculator_options) { { priceable: :test_priceable, priceable_addons: [:test_addon], priceable_modifiers: [:test_modifier], volume: :quantity, interval_start: :request_date } }
 
             it 'does not raise an error' do
               expect { subject }.to_not raise_error
