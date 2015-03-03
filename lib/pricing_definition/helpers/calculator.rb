@@ -44,10 +44,6 @@ module PricingDefinition
         pricing_definition.for_volume(overall_volume)
       end
 
-      def currencies
-        parties.map { |p| p.currency.downcase.to_sym }
-      end
-
       def modifiers
         config_priceable_modifiers.map do |modifier|
           resource.send(modifier)

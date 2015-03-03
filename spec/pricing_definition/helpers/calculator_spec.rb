@@ -90,14 +90,6 @@ module PricingDefinition
         end
       end
 
-      describe '#currencies' do
-        subject { calculator.currencies }
-
-        it 'returns a collection containing all involved currencies' do
-          expect(subject).to include(:eur, :usd)
-        end
-      end
-
       describe '#priceable' do
         subject { calculator.priceable }
         let(:test_priceable) { ::TestPriceable.new }
