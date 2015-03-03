@@ -32,6 +32,25 @@ module PricingDefinition
         end
       end
 
+      def serialized
+        {
+          pricing: {
+            fixed: pricing_rule.fixed?,
+            deposit: pricing_rule.deposit,
+            currency: pricing_rule.currency,
+            prices: pricing_rule.prices
+          },
+          request: {
+            interval_start: interval_start,
+            overall_volume: overall_volume,
+            volume: volume,
+            priceable_type: priceable.class.name,
+            priceable_id: priceable.id
+          },
+          modifiers: parties_modifiers(true)
+        }
+      end
+
       def overall_volume
         volume.map { |label, quantity| quantity }.compact.reduce(:+)
       end
@@ -41,21 +60,21 @@ module PricingDefinition
       end
 
       def pricing_rule
-        pricing_definition.for_volume(overall_volume)
+        Calculator::PricingRule.new(pricing_definition.for_volume(overall_volume))
       end
 
       def modifiers
-        config_priceable_modifiers.map do |modifier|
+        (config_priceable_modifiers || []).map do |modifier|
           resource.send(modifier)
         end.compact
       end
 
-      def parties_modifiers
+      def parties_modifiers(serialized = false)
         if resource.respond_to?(:parties_modifiers)
-          resource.send(:parties_modifiers)
+          resource.send(:parties_modifiers, serialized)
         else
           config_parties.keys.each_with_object({}) do |party_name, obj|
-            obj[party_name] = modifiers
+            obj[party_name] = serialized ? modifiers.map(&:serialized) : modifiers
           end
         end
       end

@@ -9,7 +9,7 @@ module PricingDefinition
         end
 
         def fixed?
-          rule[:pricing][:fixed] == true
+          pricing[:fixed] == true
         end
 
         def deposit

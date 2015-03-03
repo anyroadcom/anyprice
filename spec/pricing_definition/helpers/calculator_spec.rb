@@ -27,6 +27,49 @@ module PricingDefinition
         end
       end
 
+      describe '#serialized' do
+        subject { calculator.serialized }
+        let(:interval_start) { Date.parse('2015-05-01') }
+        let(:volume) { { adults: 4, children: 3, seniors: 3 } }
+        let(:pricing_definition) { create_definition! }
+        let(:priceable) { pricing_definition.priceable }
+        let(:pricing_rule) { Calculator::PricingRule.new(pricing_rule_args) }
+        let(:pricing_rule_args) { { pricing: { fixed: false, price: { adults: 800, children: 600 }, deposit: 200 }, currency: :gbp } }
+        let(:test_modifier) { TestModifier.create! }
+
+        before(:each) do
+          allow(calculator).to receive(:interval_start).and_return(interval_start)
+          allow(calculator).to receive(:volume).and_return(volume)
+          allow(calculator).to receive(:priceable).and_return(priceable)
+        end
+
+        it 'includes information about the pricing' do
+          allow(calculator).to receive(:pricing_rule).and_return(pricing_rule)
+          pricing = subject[:pricing]
+          expect(pricing[:fixed]).to eq(pricing_rule.fixed?)
+          expect(pricing[:deposit]).to eq(pricing_rule.deposit)
+          expect(pricing[:prices]).to eq(pricing_rule.prices)
+          expect(pricing[:currency]).to eq(pricing_rule.currency)
+        end
+
+        it 'includes information about the modifiers' do
+          allow(calculator).to receive(:modifiers).and_return([test_modifier])
+          modifiers = subject[:modifiers]
+          expect(modifiers).to include(:acme_inc, :business)
+          expect(modifiers[:acme_inc]).to include(test_modifier.serialized)
+          expect(modifiers[:business]).to include(test_modifier.serialized)
+        end
+
+        it 'includes information about the request' do
+          request = subject[:request]
+          expect(request[:interval_start]).to eq(interval_start)
+          expect(request[:overall_volume]).to eq(10)
+          expect(request[:volume]).to eq(volume)
+          expect(request[:priceable_id]).to eq(priceable.id)
+          expect(request[:priceable_type]).to eq(priceable.class.name)
+        end
+      end
+
       describe '#pricing_definition' do
         subject { calculator.pricing_definition }
         let(:pricing_definition) { create_definition! }
@@ -51,7 +94,9 @@ module PricingDefinition
 
       describe '#pricing_rule' do
         subject { calculator.pricing_rule }
-        let(:pricing) { create_definition! definition: definition }
+        let(:pricing) { create_definition! definition: definition, priceable: priceable }
+        let(:priceable) { TestPriceable.create currency: currency }
+        let(:currency) { :gbp }
         let(:overall_volume) { 8 }
         let(:definition) {
           {
@@ -65,10 +110,10 @@ module PricingDefinition
         it 'returns rule for matching volume' do
           allow(calculator).to receive(:pricing_definition).and_return(pricing)
           allow(calculator).to receive(:overall_volume).and_return(overall_volume)
-          rule = subject[:pricing]
-          expect(rule[:fixed]).to eq(false)
-          expect(rule[:price]).to include(adults: 800, children: 600)
-          expect(rule[:deposit]).to eq(200)
+          expect(subject).to_not be_fixed
+          expect(subject.prices[:adults]).to eq(Money.new(800, currency))
+          expect(subject.prices[:children]).to eq(Money.new(600, currency))
+          expect(subject.deposit).to eq(Money.new(200, currency))
         end
       end
 
@@ -155,8 +200,9 @@ module PricingDefinition
       end
 
       describe '#parties_modifiers' do
-        subject { calculator.parties_modifiers }
+        subject { calculator.parties_modifiers(serialized) }
         let!(:modifier) { ::TestModifier.new }
+        let(:serialized) { false }
 
         before(:each) do
           allow(calculator).to receive(:modifiers).and_return([modifier])
@@ -165,18 +211,32 @@ module PricingDefinition
         context 'when resource does not define :parties_modifiers' do
           it 'returns its value' do
             modifiers = { acme_inc: [modifier] }
-            allow(acme_order).to receive(:parties_modifiers).and_return(modifiers)
-            expect(acme_order).to respond_to(:parties_modifiers)
+            allow(acme_order).to receive(:parties_modifiers).with(serialized).and_return(modifiers)
             expect(subject).to eq(modifiers)
           end
         end
 
         context 'when resource does not define :parties_modifiers' do
-          it 'contains parties names as keys and #modifiers as values' do
-            expect(calculator.resource).to_not respond_to(:parties_modifiers)
-            expect(subject.keys).to include(:acme_inc, :business)
-            expect(subject[:acme_inc]).to eq(calculator.modifiers)
-            expect(subject[:business]).to eq(calculator.modifiers)
+          context 'and serialized' do
+            let(:serialized) { true }
+
+            it 'contains parties names as keys and serialized #modifiers as values' do
+              expect(calculator.resource).to_not respond_to(:parties_modifiers)
+              expect(subject.keys).to include(:acme_inc, :business)
+              expect(subject[:acme_inc]).to eq(calculator.modifiers.map(&:serialized))
+              expect(subject[:business]).to eq(calculator.modifiers.map(&:serialized))
+            end
+          end
+
+          context 'and not serialized' do
+            let(:serialized) { false }
+
+            it 'contains parties names as keys and #modifiers as values' do
+              expect(calculator.resource).to_not respond_to(:parties_modifiers)
+              expect(subject.keys).to include(:acme_inc, :business)
+              expect(subject[:acme_inc]).to eq(calculator.modifiers)
+              expect(subject[:business]).to eq(calculator.modifiers)
+            end
           end
         end
       end
