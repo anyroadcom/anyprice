@@ -10,9 +10,11 @@ module PricingDefinition
       let(:calculator) { PricingDefinition::Helpers::Calculator.new(acme_order) }
       let(:klass) { ::AcmeOrder }
       let(:priceable_calculator_options) { { priceable: :test_priceable, priceable_addons: [:test_addon], priceable_modifiers: [:test_modifier], volume: :quantity, interval_start: :request_date } }
+      let(:test_modifier) { ::TestModifier.create! }
 
       before(:each) do
         allow(acme_order).to receive(:business).and_return(business)
+        allow(acme_order).to receive(:test_modifier).and_return(test_modifier)
         klass.priceable_calculator(priceable_calculator_options) do |config|
           config.add_party :acme_inc, source: :self, currency: 'eur', type: :charge
           config.add_party :business, currency: :currency, type: :base
@@ -35,7 +37,6 @@ module PricingDefinition
         let(:priceable) { pricing_definition.priceable }
         let(:pricing_rule) { Calculator::PricingRule.new(pricing_rule_args) }
         let(:pricing_rule_args) { { pricing: { fixed: false, price: { adults: 800, children: 600 }, deposit: 200 }, currency: :gbp } }
-        let(:test_modifier) { TestModifier.create! }
 
         before(:each) do
           allow(calculator).to receive(:interval_start).and_return(interval_start)
@@ -188,11 +189,6 @@ module PricingDefinition
 
       describe '#modifiers' do
         subject { calculator.modifiers }
-        let!(:test_modifier) { ::TestModifier.new }
-
-        before(:each) do
-          allow(acme_order).to receive(:test_modifier).and_return(test_modifier)
-        end
 
         it 'returns a collection of all defined modifiers' do
           expect(subject).to include(test_modifier)
@@ -201,16 +197,15 @@ module PricingDefinition
 
       describe '#parties_modifiers' do
         subject { calculator.parties_modifiers(serialized) }
-        let!(:modifier) { ::TestModifier.new }
         let(:serialized) { false }
+        let(:modifiers) { { acme_inc: [test_modifier] } }
 
         before(:each) do
-          allow(calculator).to receive(:modifiers).and_return([modifier])
+          allow(calculator).to receive(:modifiers).and_return([test_modifier])
         end
 
         context 'when resource does not define :parties_modifiers' do
           it 'returns its value' do
-            modifiers = { acme_inc: [modifier] }
             allow(acme_order).to receive(:parties_modifiers).with(serialized).and_return(modifiers)
             expect(subject).to eq(modifiers)
           end
